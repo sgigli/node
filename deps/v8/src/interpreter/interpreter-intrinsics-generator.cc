@@ -47,7 +47,7 @@ class IntrinsicsGenerator {
   Node* IntrinsicAsBuiltinCall(
       const InterpreterAssembler::RegListNodePair& args, Node* context,
       Builtins::Name name);
-  void AbortIfArgCountMismatch(int expected, compiler::Node* actual);
+  void AbortIfArgCountMismatch(int expected, compiler::TNode<Word32T> actual);
 
 #define DECLARE_INTRINSIC_HELPER(name, lower_case, count) \
   Node* name(const InterpreterAssembler::RegListNodePair& args, Node* context);
@@ -124,7 +124,7 @@ Node* IntrinsicsGenerator::InvokeIntrinsic(
 
 Node* IntrinsicsGenerator::CompareInstanceType(Node* object, int type,
                                                InstanceTypeCompareMode mode) {
-  Node* instance_type = __ LoadInstanceType(object);
+  TNode<Uint16T> instance_type = __ LoadInstanceType(object);
 
   if (mode == kInstanceTypeEqual) {
     return __ Word32Equal(instance_type, __ Int32Constant(type));
@@ -146,22 +146,24 @@ Node* IntrinsicsGenerator::IsInstanceType(Node* input, int type) {
 
 Node* IntrinsicsGenerator::IsJSReceiver(
     const InterpreterAssembler::RegListNodePair& args, Node* context) {
-  Node* input = __ LoadRegisterFromRegisterList(args, 0);
+  TNode<Object> input = __ LoadRegisterFromRegisterList(args, 0);
   TNode<Oddball> result = __ Select<Oddball>(
       __ TaggedIsSmi(input), [=] { return __ FalseConstant(); },
-      [=] { return __ SelectBooleanConstant(__ IsJSReceiver(input)); });
+      [=] {
+        return __ SelectBooleanConstant(__ IsJSReceiver(__ CAST(input)));
+      });
   return result;
 }
 
 Node* IntrinsicsGenerator::IsArray(
     const InterpreterAssembler::RegListNodePair& args, Node* context) {
-  Node* input = __ LoadRegisterFromRegisterList(args, 0);
+  TNode<Object> input = __ LoadRegisterFromRegisterList(args, 0);
   return IsInstanceType(input, JS_ARRAY_TYPE);
 }
 
 Node* IntrinsicsGenerator::IsSmi(
     const InterpreterAssembler::RegListNodePair& args, Node* context) {
-  Node* input = __ LoadRegisterFromRegisterList(args, 0);
+  TNode<Object> input = __ LoadRegisterFromRegisterList(args, 0);
   return __ SelectBooleanConstant(__ TaggedIsSmi(input));
 }
 
@@ -229,7 +231,7 @@ Node* IntrinsicsGenerator::ToObject(
 Node* IntrinsicsGenerator::Call(
     const InterpreterAssembler::RegListNodePair& args, Node* context) {
   // First argument register contains the function target.
-  Node* function = __ LoadRegisterFromRegisterList(args, 0);
+  TNode<Object> function = __ LoadRegisterFromRegisterList(args, 0);
 
   // The arguments for the target function are from the second runtime call
   // argument.
@@ -239,7 +241,7 @@ Node* IntrinsicsGenerator::Call(
 
   if (FLAG_debug_code) {
     InterpreterAssembler::Label arg_count_positive(assembler_);
-    Node* comparison =
+    TNode<BoolT> comparison =
         __ Int32LessThan(target_args.reg_count(), __ Int32Constant(0));
     __ GotoIfNot(comparison, &arg_count_positive);
     __ Abort(AbortReason::kWrongArgumentCountForInvokeIntrinsic);
@@ -260,18 +262,18 @@ Node* IntrinsicsGenerator::CreateAsyncFromSyncIterator(
   InterpreterAssembler::Variable return_value(assembler_,
                                               MachineRepresentation::kTagged);
 
-  Node* sync_iterator = __ LoadRegisterFromRegisterList(args, 0);
+  TNode<Object> sync_iterator = __ LoadRegisterFromRegisterList(args, 0);
 
   __ GotoIf(__ TaggedIsSmi(sync_iterator), &not_receiver);
-  __ GotoIfNot(__ IsJSReceiver(sync_iterator), &not_receiver);
+  __ GotoIfNot(__ IsJSReceiver(__ CAST(sync_iterator)), &not_receiver);
 
-  Node* const next =
+  TNode<Object> const next =
       __ GetProperty(context, sync_iterator, factory()->next_string());
 
-  Node* const native_context = __ LoadNativeContext(context);
-  Node* const map = __ LoadContextElement(
-      native_context, Context::ASYNC_FROM_SYNC_ITERATOR_MAP_INDEX);
-  Node* const iterator = __ AllocateJSObjectFromMap(map);
+  TNode<Context> const native_context = __ LoadNativeContext(context);
+  TNode<Map> const map = __ CAST(__ LoadContextElement(
+      native_context, Context::ASYNC_FROM_SYNC_ITERATOR_MAP_INDEX));
+  TNode<JSObject> const iterator = __ AllocateJSObjectFromMap(map);
 
   __ StoreObjectFieldNoWriteBarrier(
       iterator, JSAsyncFromSyncIterator::kSyncIteratorOffset, sync_iterator);
@@ -302,8 +304,9 @@ Node* IntrinsicsGenerator::CreateJSGeneratorObject(
 
 Node* IntrinsicsGenerator::GeneratorGetResumeMode(
     const InterpreterAssembler::RegListNodePair& args, Node* context) {
-  Node* generator = __ LoadRegisterFromRegisterList(args, 0);
-  Node* const value =
+  TNode<JSGeneratorObject> generator =
+      __ CAST(__ LoadRegisterFromRegisterList(args, 0));
+  TNode<Object> const value =
       __ LoadObjectField(generator, JSGeneratorObject::kResumeModeOffset);
 
   return value;
@@ -311,7 +314,8 @@ Node* IntrinsicsGenerator::GeneratorGetResumeMode(
 
 Node* IntrinsicsGenerator::GeneratorClose(
     const InterpreterAssembler::RegListNodePair& args, Node* context) {
-  Node* generator = __ LoadRegisterFromRegisterList(args, 0);
+  TNode<JSGeneratorObject> generator =
+      __ CAST(__ LoadRegisterFromRegisterList(args, 0));
   __ StoreObjectFieldNoWriteBarrier(
       generator, JSGeneratorObject::kContinuationOffset,
       __ SmiConstant(JSGeneratorObject::kGeneratorClosed));
@@ -320,10 +324,10 @@ Node* IntrinsicsGenerator::GeneratorClose(
 
 Node* IntrinsicsGenerator::GetImportMetaObject(
     const InterpreterAssembler::RegListNodePair& args, Node* context) {
-  Node* const module_context = __ LoadModuleContext(context);
-  Node* const module =
-      __ LoadContextElement(module_context, Context::EXTENSION_INDEX);
-  Node* const import_meta =
+  TNode<Context> const module_context = __ LoadModuleContext(context);
+  TNode<HeapObject> const module =
+      __ CAST(__ LoadContextElement(module_context, Context::EXTENSION_INDEX));
+  TNode<Object> const import_meta =
       __ LoadObjectField(module, SourceTextModule::kImportMetaOffset);
 
   InterpreterAssembler::Variable return_value(assembler_,
@@ -395,9 +399,10 @@ Node* IntrinsicsGenerator::AsyncGeneratorYield(
   return IntrinsicAsBuiltinCall(args, context, Builtins::kAsyncGeneratorYield);
 }
 
-void IntrinsicsGenerator::AbortIfArgCountMismatch(int expected, Node* actual) {
+void IntrinsicsGenerator::AbortIfArgCountMismatch(int expected,
+                                                  TNode<Word32T> actual) {
   InterpreterAssembler::Label match(assembler_);
-  Node* comparison = __ Word32Equal(actual, __ Int32Constant(expected));
+  TNode<BoolT> comparison = __ Word32Equal(actual, __ Int32Constant(expected));
   __ GotoIf(comparison, &match);
   __ Abort(AbortReason::kWrongArgumentCountForInvokeIntrinsic);
   __ Goto(&match);

@@ -513,11 +513,15 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
 
   void movq_string(Register dst, const StringConstantBase* str);
 
-  // Loads a 64-bit immediate into a register.
+  // Loads a 64-bit immediate into a register, potentially using the constant
+  // pool.
   void movq(Register dst, int64_t value) { movq(dst, Immediate64(value)); }
   void movq(Register dst, uint64_t value) {
     movq(dst, Immediate64(static_cast<int64_t>(value)));
   }
+
+  // Loads a 64-bit immediate into a register without using the constant pool.
+  void movq_imm64(Register dst, int64_t value);
 
   void movsxbl(Register dst, Register src);
   void movsxbl(Register dst, Operand src);
@@ -916,6 +920,8 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
 
   // SSE3
   void lddqu(XMMRegister dst, Operand src);
+  void movddup(XMMRegister dst, Operand src);
+  void movddup(XMMRegister dst, XMMRegister src);
 
   // SSSE3
   void ssse3_instr(XMMRegister dst, XMMRegister src, byte prefix, byte escape1,
@@ -1329,14 +1335,14 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   }
 
   AVX_SP_3(vsqrt, 0x51)
-  AVX_SP_3(vadd, 0x58)
-  AVX_SP_3(vsub, 0x5c)
-  AVX_SP_3(vmul, 0x59)
-  AVX_SP_3(vdiv, 0x5e)
-  AVX_SP_3(vmin, 0x5d)
-  AVX_SP_3(vmax, 0x5f)
+  AVX_S_3(vadd, 0x58)
+  AVX_S_3(vsub, 0x5c)
+  AVX_S_3(vmul, 0x59)
+  AVX_S_3(vdiv, 0x5e)
+  AVX_S_3(vmin, 0x5d)
+  AVX_S_3(vmax, 0x5f)
   AVX_P_3(vand, 0x54)
-  AVX_P_3(vandn, 0x55)
+  AVX_3(vandnps, 0x55, vps)
   AVX_P_3(vor, 0x56)
   AVX_P_3(vxor, 0x57)
   AVX_3(vcvtsd2ss, 0x5a, vsd)
