@@ -2440,7 +2440,7 @@ Node.js versions.
 ### DEP0129: ChildProcess._channel
 <!-- YAML
 changes:
-  - version: REPLACEME
+  - version: v13.0.0
     pr-url: https://github.com/nodejs/node/pull/27949
     description: Runtime deprecation.
   - version: v11.14.0
@@ -2458,7 +2458,7 @@ instead.
 ### DEP0130: Module.createRequireFromPath()
 <!-- YAML
 changes:
-  - version: REPLACEME
+  - version: v13.0.0
     pr-url: https://github.com/nodejs/node/pull/27951
     description: Runtime deprecation.
   - version: v12.2.0
@@ -2504,7 +2504,7 @@ Passing a callback to [`worker.terminate()`][] is deprecated. Use the returned
 ### DEP0133: http connection
 <!-- YAML
 changes:
-  - version: REPLACEME
+  - version: v13.0.0
     pr-url: https://github.com/nodejs/node/pull/29015
     description: Documentation-only deprecation.
 -->

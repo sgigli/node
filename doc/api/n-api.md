@@ -166,7 +166,7 @@ listed as supporting a later version.
 | v10.x |         |          | v10.0.0  | v10.16.0 |           |
 | v11.x |         |          | v11.0.0  | v11.8.0  |           |
 | v12.x |         |          |          | v12.0.0  |           |
-| v13.x |         |          |          |          | REPLACEME |
+| v13.x |         |          |          |          | v13.0.0 |
 
 \* Indicates that the N-API version was released as experimental
 
